@@ -52,7 +52,8 @@ graph_builder.add_edge(START, "retrieve")
 graph = graph_builder.compile()
 
 # Streamlit App
-st.title("URL-Based Q&A System")
+st.title("ChatURL")
+st.logo(".streamlit/assets/logo.png")
 
 # Initialize session state
 if "content_indexed" not in st.session_state:
@@ -67,9 +68,9 @@ with st.sidebar:
         st.session_state["loaded_urls"] = []  # A list to store loaded URLs
 
     # Input for URL
-    url = st.text_input("Enter a URL to analyze:", "")
+    url = st.text_input("Enter a URL to analyze:", "https://example.com/")
 
-    if st.button("Load and Index Content"):
+    if st.button("Load URL"):
         if url:  # Ensure the URL is not empty
             # Check if the URL has already been loaded
             if url in st.session_state["loaded_urls"]:
@@ -111,7 +112,7 @@ with st.sidebar:
 
 # Question-Answering Interface with Chatbot-like UI
 if st.session_state.get("loaded_urls"):  # Check if any URLs have been loaded
-    
+
     # Initialize session state for chat history if not already present
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []  # Stores chat messages as a list of dicts
@@ -152,4 +153,4 @@ if st.session_state.get("loaded_urls"):  # Check if any URLs have been loaded
         asyncio.run(stream_response())
 
 else:
-    st.info("Please load and index content from a URL before asking questions.")
+    st.info("Please load URL in the sidebar before asking questions.")

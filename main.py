@@ -58,30 +58,32 @@ st.title("URL-Based Q&A System")
 if "content_indexed" not in st.session_state:
     st.session_state["content_indexed"] = False
 
-# URL Input
-url = st.text_input("Enter a URL to analyze:", "https://calpaterson.com/agile.html")
-if st.button("Load and Index Content"):
-    # Load and chunk contents of the blog
-    loader = WebBaseLoader(
-        web_paths=(url,),
-        bs_kwargs=dict(
-            parse_only=bs4.SoupStrainer(
-                class_=("post-content", "post-title", "post-header")
-            )
-        ),
-    )
-    try:
-        docs = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        all_splits = text_splitter.split_documents(docs)
-        
-        # Index chunks
-        vector_store.delete()  # Clear any previous data
-        _ = vector_store.add_documents(documents=all_splits)
-        st.session_state["content_indexed"] = True  # Mark content as indexed
-        st.success("Content loaded and indexed successfully!")
-    except Exception as e:
-        st.error(f"Error loading content: {str(e)}")
+# Sidebar for URL Input
+with st.sidebar:
+    st.header("Load Content")
+    url = st.text_input("Enter a URL to analyze:", "https://calpaterson.com/agile.html")
+    if st.button("Load and Index Content"):
+        # Load and chunk contents of the blog
+        loader = WebBaseLoader(
+            web_paths=(url,),
+            bs_kwargs=dict(
+                parse_only=bs4.SoupStrainer(
+                    class_=("post-content", "post-title", "post-header")
+                )
+            ),
+        )
+        try:
+            docs = loader.load()
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            all_splits = text_splitter.split_documents(docs)
+
+            # Index chunks
+            vector_store.delete()  # Clear any previous data
+            _ = vector_store.add_documents(documents=all_splits)
+            st.session_state["content_indexed"] = True  # Mark content as indexed
+            st.success("Content loaded and indexed successfully!")
+        except Exception as e:
+            st.error(f"Error loading content: {str(e)}")
 
 # Question-Answering Interface with Chatbot-like UI
 if st.session_state["content_indexed"]:  # Check if content has been indexed

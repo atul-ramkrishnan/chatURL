@@ -61,33 +61,57 @@ if "content_indexed" not in st.session_state:
 # Sidebar for URL Input
 with st.sidebar:
     st.header("Load Content")
-    url = st.text_input("Enter a URL to analyze:", "https://calpaterson.com/agile.html")
-    if st.button("Load and Index Content"):
-        # Load and chunk contents of the blog
-        loader = WebBaseLoader(
-            web_paths=(url,),
-            bs_kwargs=dict(
-                parse_only=bs4.SoupStrainer(
-                    class_=("post-content", "post-title", "post-header")
-                )
-            ),
-        )
-        try:
-            docs = loader.load()
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-            all_splits = text_splitter.split_documents(docs)
 
-            # Index chunks
-            vector_store.delete()  # Clear any previous data
-            _ = vector_store.add_documents(documents=all_splits)
-            st.session_state["content_indexed"] = True  # Mark content as indexed
-            st.success("Content loaded and indexed successfully!")
-        except Exception as e:
-            st.error(f"Error loading content: {str(e)}")
+    # Initialize session state to track loaded URLs
+    if "loaded_urls" not in st.session_state:
+        st.session_state["loaded_urls"] = []  # A list to store loaded URLs
+
+    # Input for URL
+    url = st.text_input("Enter a URL to analyze:", "")
+
+    if st.button("Load and Index Content"):
+        if url:  # Ensure the URL is not empty
+            # Check if the URL has already been loaded
+            if url in st.session_state["loaded_urls"]:
+                st.warning("This URL has already been loaded.")
+            else:
+                # Load and chunk contents of the URL
+                loader = WebBaseLoader(
+                    web_paths=(url,),
+                    bs_kwargs=dict(
+                        parse_only=bs4.SoupStrainer(
+                            class_=("post-content", "post-title", "post-header")
+                        )
+                    ),
+                )
+                try:
+                    docs = loader.load()
+                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+                    all_splits = text_splitter.split_documents(docs)
+
+                    # Add new chunks to the vector store
+                    _ = vector_store.add_documents(documents=all_splits)
+
+                    # Track the URL as loaded
+                    st.session_state["loaded_urls"].append(url)
+
+                    st.success(f"Content from the URL '{url}' has been successfully added!")
+                except Exception as e:
+                    st.error(f"Error loading content from the URL: {str(e)}")
+        else:
+            st.error("Please enter a valid URL.")
+
+    # Display the list of loaded URLs
+    st.write("### Loaded URLs:")
+    if st.session_state["loaded_urls"]:
+        for loaded_url in st.session_state["loaded_urls"]:
+            st.write(f"- {loaded_url}")
+    else:
+        st.info("No URLs have been loaded yet.")
 
 # Question-Answering Interface with Chatbot-like UI
-if st.session_state["content_indexed"]:  # Check if content has been indexed
-
+if st.session_state.get("loaded_urls"):  # Check if any URLs have been loaded
+    
     # Initialize session state for chat history if not already present
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []  # Stores chat messages as a list of dicts

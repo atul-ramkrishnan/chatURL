@@ -10,12 +10,12 @@ from typing_extensions import List, TypedDict
 import bs4
 import dotenv
 import asyncio
+from langchain_core.caches import BaseCache
 
 # Load environment variables
 dotenv.load_dotenv()
 
 # Initialize components
-ChatOpenAI.model_rebuild()
 llm = ChatOpenAI(model="gpt-4o-mini", streaming=True)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 vector_store = InMemoryVectorStore(embeddings)

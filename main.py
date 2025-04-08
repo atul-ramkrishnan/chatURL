@@ -5,8 +5,8 @@ from langchain import hub
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.graph import START, StateGraph
-from typing_extensions import List, TypedDict
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 import bs4
 import dotenv
 import asyncio
@@ -22,34 +22,10 @@ vector_store = InMemoryVectorStore(embeddings)
 # Load prompt for question-answering
 prompt = hub.pull("rlm/rag-prompt")
 
-# Define state schema
-class State(TypedDict):
-    question: str
-    context: List[Document]
-    answer: str
-
-# Define application steps
-def retrieve(state: State):
-    retrieved_docs = vector_store.similarity_search(state["question"])
-    return {"context": retrieved_docs}
-
-async def generate(state: State):
-    """
-    Generates a response to the user's query using the LLM.
-
-    This function is asynchronous because it streams tokens from the LLM as they 
-    are generated. The async behavior allows real-time, non-blocking processing 
-    of the streamed response, enabling incremental updates to the user interface.
-    """
-    docs_content = "\n\n".join(doc.page_content for doc in state["context"])
-    messages = prompt.invoke({"question": state["question"], "context": docs_content})
-    response = await llm.ainvoke(messages)  # Asynchronous invocation for streaming
-    return {"answer": response.content}
-
-# Compile workflow
-graph_builder = StateGraph(State).add_sequence([retrieve, generate])
-graph_builder.add_edge(START, "retrieve")
-graph = graph_builder.compile()
+# Create the RAG chain
+retriever = vector_store.as_retriever()
+document_chain = create_stuff_documents_chain(llm, prompt)
+retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
 # Streamlit App
 st.title("ChatURL")
@@ -137,13 +113,9 @@ if st.session_state.get("loaded_urls"):  # Check if any URLs have been loaded
                 placeholder = st.empty()  # Placeholder for updating the response incrementally
                 response_text = ""  # Accumulate the assistant's response incrementally
 
-                # Stream response token by token using `stream_mode="messages"`
-                async for msg, metadata in graph.astream({"question": user_input}, stream_mode="messages"):
-                    if msg.content:  # Ensure there's content to add
-                        response_text += msg.content
-                        placeholder.write(response_text)  # Update the UI incrementally
-
-                # Finalize display after the stream is complete
+                # Use the retrieval chain to get the response
+                response = await retrieval_chain.ainvoke({"input": user_input})
+                response_text = response["answer"]
                 placeholder.write(response_text)
 
                 # Add the assistant's response to chat history

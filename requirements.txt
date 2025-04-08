@@ -8,3 +8,4 @@ langgraph==0.2.67
 python-dotenv==1.0.1
 streamlit==1.41.1
 typing_extensions==4.12.2
+pydantic==2.11.2

@@ -15,6 +15,7 @@ import asyncio
 dotenv.load_dotenv()
 
 # Initialize components
+ChatOpenAI.model_rebuild()
 llm = ChatOpenAI(model="gpt-4o-mini", streaming=True)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 vector_store = InMemoryVectorStore(embeddings)
